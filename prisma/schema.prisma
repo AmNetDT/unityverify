@@ -12,31 +12,32 @@ datasource db {
 }
 
 model Account {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  type              String?
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String      @db.ObjectId
+  type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.String
-  access_token      String? @db.String
+  refresh_token     String?     @db.String
+  access_token      String?     @db.String
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.String
+  id_token          String?      @db.String
   session_state     String?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String @db.ObjectId
+  user User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
 model Session {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionToken String   @unique
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String       @unique
+  userId       String       @db.ObjectId
+  
   expires      DateTime
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String @db.ObjectId
+  user User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UserType {
@@ -45,7 +46,7 @@ enum UserType {
 }
 
 model User {
-  id                   String        @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(auto()) @map("_id") @db.ObjectId
   name                 String?
   email                String?       @unique
   password             String?
@@ -60,6 +61,8 @@ model User {
   sessions             Session[]
   transactions         Transaction[]
   payments             Payment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum TransactionStatus {
@@ -69,26 +72,39 @@ enum TransactionStatus {
 }
 
 model Transaction {
-  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   type      String
-  slipType  SlipType[]        @relation(fields: [slipIds], references: [id])
-  slipIds    String[]          @db.ObjectId
+
+  slipTypes TransactionSlipType[]
+
   status    TransactionStatus @default(PENDING)
   price     Float
   slipBlob  Bytes?
   reference String?
-  createdBy User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String            @db.ObjectId
-  createdAt DateTime          @default(now())
+
+  createdBy User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String @db.ObjectId
+
+  createdAt DateTime @default(now())
+}
+
+model TransactionSlipType {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+
+  transactionId   String        @db.ObjectId
+  slipTypeId      String        @db.ObjectId
+
+  transaction Transaction       @relation(fields: [transactionId], references: [id])
+  slipType    SlipType          @relation(fields: [slipTypeId], references: [id])
 }
 
 model SlipType {
-  id            String        @id @default(auto()) @map("_id") @db.ObjectId
-  title         String
-  price         Float
-  image         String
-  transactionsId String[]        @db.ObjectId
-  transactions  Transaction[] @relation(fields: [transactionsId], references: [id])
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  title String
+  price Float
+  image String
+
+  transactions TransactionSlipType[]
 }
 
 enum PaymentStatus {

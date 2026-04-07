@@ -9,6 +9,7 @@ import { CustomError } from "./customError";
 
 export const authOptions: NextAuthOptions = {
   // @ts-ignore
+
   adapter: PrismaAdapter(db),
   session: {
     strategy: "jwt",
@@ -68,6 +69,9 @@ export const authOptions: NextAuthOptions = {
         token = { ...session, token };
       }
 
+      // ✅ Guard clause
+      if (!token?.email) return token;
+
       const dbUser = await db.user.findFirst({
         where: {
           email: token.email,
@@ -75,7 +79,7 @@ export const authOptions: NextAuthOptions = {
       });
 
       if (!dbUser) {
-        if (user) token.id = user?.id;
+        if (user) token.id = user.id;
         return token;
       }
 
@@ -91,7 +95,7 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ token, session }) {
-      if (token) {
+      if (session.user) {
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.email = token.email;
